@@ -1,0 +1,12 @@
+# docker-compose.yml
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db  # this will create a named volume called mongodb_data and mount it to the /data/db directory in the container, which is where MongoDB stores its data. This way, even if the container is removed, the data will persist in the named volume.
+
+volumes:
+  mongodb_data:
