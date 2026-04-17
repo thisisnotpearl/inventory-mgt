@@ -1,3 +1,5 @@
+from bson import ObjectId
+
 from products.models.models import Product
 from datetime import datetime
 import pytz
@@ -38,5 +40,6 @@ class ProductRepository:
             product.save()
         return product
     
-    
-    
+    @staticmethod
+    def get_by_category(category_id):
+        return Product.objects(category=ObjectId(category_id), is_deleted=False)
