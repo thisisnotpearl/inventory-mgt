@@ -1,6 +1,7 @@
 from urllib import request
 
 from products.services.services import ProductService
+from products.repositories.stock_event_repo import StockEventRepository
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -21,6 +22,21 @@ def serialize_product(product):
             "title": product.category.title
         }
     return product_dict
+
+def serialize_stock_event(event):
+    return {
+        "_id": str(event.id),
+        "product_sku": event.product_sku,
+        "product_name": event.product_name,
+        "event_type": event.event_type,
+        "expected_date": event.expected_date,
+        "quantity_delta": event.quantity_delta,
+        "unit_price": event.unit_price,
+        "supplier": event.supplier,
+        "notes": event.notes,
+        "status": event.status,
+        "created_at": event.created_at.isoformat() if event.created_at else None,
+    }
 
 # GET all / POST create
 @csrf_exempt
@@ -135,3 +151,199 @@ def bulk_upload(request):
             "error_count": len(errors),
             "errors": errors
         })
+
+@csrf_exempt
+def generate_products(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    body = parse_json(request) or {}
+    count = body.get("count", 50)
+    scenario = body.get("scenario", "standard")
+    
+    try:
+        result = ProductService.generate_and_save_products(count, scenario)
+        return JsonResponse(result, status=201)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def generate_stock_events(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        result = ProductService.generate_and_save_stock_events()
+        return JsonResponse(result, status=201)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def list_stock_events(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    status = request.GET.get("status")
+    sku = request.GET.get("sku")
+    
+    try:
+        if sku:
+            events = StockEventRepository.get_by_product(sku)
+        else:
+            events = StockEventRepository.get_all(status)
+        data = [serialize_stock_event(e) for e in events]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ── Semantic Search (Week 7) ─────────────────────────────────────────
+# These endpoints power the semantic search features in the dashboard.
+
+@csrf_exempt
+def compute_embeddings(request):
+    """Pre-compute embedding vectors for all products in the database.
+    
+    This should be called once after adding/generating new products,
+    so that semantic search has vectors to compare against.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        result = ProductService.compute_embeddings()
+        return JsonResponse(result, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def semantic_search(request):
+    """Search products by meaning instead of keywords.
+    
+    Usage: GET /api/v1/products/semantic-search/?q=construction+toys&top_k=10
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return JsonResponse({"error": "Query parameter 'q' is required"}, status=400)
+    
+    top_k = int(request.GET.get("top_k", 10))
+    
+    try:
+        results = ProductService.semantic_search(query, top_k)
+        return JsonResponse(results, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def similar_products(request, product_id):
+    """Find products semantically similar to a given product.
+    
+    Usage: GET /api/v1/products/<id>/similar/?top_k=5
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    top_k = int(request.GET.get("top_k", 5))
+    
+    try:
+        results = ProductService.find_similar_products(product_id, top_k)
+        return JsonResponse(results, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def evaluate_search(request):
+    """Run the search evaluation suite and return precision/recall metrics.
+    
+    Usage: GET /api/v1/products/evaluate-search/
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        results = ProductService.evaluate_search()
+        return JsonResponse(results, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ── RAG Chatbot (Week 8) ─────────────────────────────────────────────
+
+@csrf_exempt
+def ingest_rag_docs(request):
+    """Ingest text files into ChromaDB for RAG."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        result = ProductService.ingest_rag_documents()
+        return JsonResponse(result, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def ask_expert(request):
+    """Ask the RAG chatbot a question."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    body = parse_json(request) or {}
+    query = body.get("q", "").strip()
+    use_advanced = body.get("use_advanced", False)
+    
+    if not query:
+        return JsonResponse({"error": "Query 'q' is required"}, status=400)
+        
+    try:
+        result = ProductService.ask_expert(query, use_advanced=use_advanced)
+        return JsonResponse(result, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def evaluate_rag(request):
+    """Run the RAG evaluation suites."""
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        results = ProductService.evaluate_rag()
+        return JsonResponse(results, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ── AI Agent (Week 9/10) ─────────────────────────────────────────────
+
+@csrf_exempt
+def ask_agent(request):
+    """Ask the AI Sales Agent for a quote."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    body = parse_json(request) or {}
+    query = body.get("q", "").strip()
+    history = body.get("history", [])
+    
+    if not query:
+        return JsonResponse({"error": "Query 'q' is required"}, status=400)
+        
+    try:
+        # Convert steps to a serializable format
+        result = ProductService.ask_sales_agent(query, history)
+        
+        # Action Tool and Tool inputs might be Pydantic objects or complex dicts
+        # Let's clean them up for JSON serialization
+        cleaned_steps = []
+        for step in result.get("steps", []):
+            cleaned_steps.append({
+                "tool": step["tool"],
+                "tool_input": step["tool_input"],
+                "result": step["result"]
+            })
+            
+        return JsonResponse({
+            "answer": result["answer"],
+            "steps": cleaned_steps
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
