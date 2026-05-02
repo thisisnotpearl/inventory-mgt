@@ -43,3 +43,21 @@ class ProductRepository:
     @staticmethod
     def get_by_category(category_id):
         return Product.objects(category=ObjectId(category_id), is_deleted=False)
+
+    # ── Embedding helpers ──────────────────────────────────────────────
+    # These are used by the semantic search feature.  We keep them in the
+    # repository so the service layer never touches MongoEngine directly.
+
+    @staticmethod
+    def get_products_with_embeddings():
+        """Return non-deleted products that already have a computed embedding."""
+        return Product.objects(is_deleted=False, embedding__ne=[])
+
+    @staticmethod
+    def update_embedding(product_id, embedding: list[float]):
+        """Store a pre-computed embedding vector on a product document."""
+        product = Product.objects(id=product_id).first()
+        if product:
+            product.embedding = embedding
+            product.save()
+        return product
