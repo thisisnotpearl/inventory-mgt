@@ -5,9 +5,9 @@ import pytz
 import sys
 import os
 
-# ---
+
 # Page config  
-# ---
+
 st.set_page_config(
     page_title="Inventory Dashboard",
     page_icon=":v:",
@@ -15,9 +15,9 @@ st.set_page_config(
     initial_sidebar_state="auto", # auto, expanded, collapsed
 )
 
-# ---
+
 # Bootstrap Django so we can import models directly
-# ---
+
 
 
 # Assumes this dashboard.py is inside the main Django project folder (same level as manage.py)
@@ -30,15 +30,15 @@ _MODEL_ERR = ""
 try:
     import django
     django.setup()
-    from products.models.models import Product        # noqa: E402
-    from categories.models.models import Category     # noqa: E402
+    from products.models.models import Product        
+    from categories.models.models import Category     
     MODELS_LOADED = True
 except Exception as _e:
     _MODEL_ERR = str(_e)
 
-# ---
+
 # Helpers
-# ---
+
 LOW_STOCK_DEFAULT = 10
 
 
@@ -77,11 +77,11 @@ def all_categories():
     return list(Category.objects.all())
 
 
-# ---
+
 # Sidebar
-# ---
+
 with st.sidebar:
-    st.title("📦 Inventory")
+    st.title("Inventory")
     st.markdown("---")
 
     # Low-stock threshold
@@ -117,10 +117,10 @@ with st.sidebar:
     st.caption("invmgt · Streamlit Dashboard")
 
 
-# ---
+
 # Main title + connection guard
-# ---
-st.title("📦 Inventory Dashboard")
+
+st.title(" Inventory Dashboard")
 
 if not MODELS_LOADED:
     st.error(
@@ -131,9 +131,9 @@ if not MODELS_LOADED:
     )
     st.stop()
 
-# ---
+
 # Fetch data
-# ---
+
 try:
     df_all      = qs_to_df(fetch_live())                    # full unfiltered set
     df_filtered = qs_to_df(fetch_live(category_id=selected_cat_id))
@@ -156,9 +156,9 @@ if not df_filtered.empty:
         )
         df_filtered = df_filtered[mask]
 
-# ---
+
 # KPI Row - key performance indicators
-# ---
+
 if not df_all.empty:
     total_skus  = len(df_all)
     total_units = int(df_all["Quantity"].sum())
@@ -176,9 +176,9 @@ if not df_all.empty:
     c5.metric("💰 Inventory Value", f"₹{total_val:,.2f}")
     st.markdown("---")
 
-# ---
-# 🚨 Stock-Alert Banner
-# ---
+
+# Stock-Alert Banner
+
 if not df_all.empty:
     low_df = df_all[df_all["Quantity"] < threshold].copy().sort_values("Quantity")
     if not low_df.empty:
@@ -194,9 +194,9 @@ if not df_all.empty:
         st.dataframe(styled_alert, use_container_width=True, hide_index=True)
         st.markdown("---")
 
-# ---
+
 # Main Inventory Table
-# ---
+
 heading = "📋 Inventory"
 if selected_cat_label != "All":
     heading += f" — {selected_cat_label}"
@@ -231,14 +231,14 @@ else:
 
 st.markdown("---")
 
-# ---
+
 # Add Product
-# ---
-with st.expander("➕  Add New Product", expanded=False):
+
+with st.expander("+ Add New Product", expanded=False):
     st.subheader("New Product")
     cats = all_categories()
     if not cats:
-        st.warning("⚠️ No categories found. Create one via the API first.")
+        st.warning("! No categories found. Create one via the API first.")
     else:
         cat_options = {c.title: c for c in cats}
         with st.form("add_form", clear_on_submit=True):
@@ -276,10 +276,10 @@ with st.expander("➕  Add New Product", expanded=False):
                     except Exception as exc:
                         st.error(f"Failed to save product: {exc}")
 
-# ---
-# 🗑️ Soft-Delete Product
-# ---
-with st.expander("🗑️  Remove a Product (soft-delete)", expanded=False):
+
+# Soft-Delete Product
+
+with st.expander("Remove a Product (soft-delete)", expanded=False):
     st.subheader("Remove Product")
     if df_all.empty:
         st.info("No products available.")
@@ -287,7 +287,7 @@ with st.expander("🗑️  Remove a Product (soft-delete)", expanded=False):
         label_to_id = {f"{r['SKU']} — {r['Name']}": r["_id"] for _, r in df_all.iterrows()}
         chosen = st.selectbox("Select product", list(label_to_id.keys()))
         confirm = st.checkbox(f"I confirm I want to soft-delete **{chosen}**")
-        if st.button("🗑️  Delete", type="secondary", disabled=not confirm):
+        if st.button(" Delete", type="secondary", disabled=not confirm):
             try:
                 p = Product.objects.get(id=label_to_id[chosen])
                 p.is_deleted = True
@@ -298,10 +298,10 @@ with st.expander("🗑️  Remove a Product (soft-delete)", expanded=False):
             except Exception as exc:
                 st.error(f"Could not delete: {exc}")
 
-# ---
-# 🔧 Adjust Stock Quantity
-# ---
-with st.expander("🔧  Adjust Stock Quantity", expanded=False):
+
+#  Adjust Stock Quantity
+
+with st.expander("Adjust Stock Quantity", expanded=False):
     st.subheader("Quick Stock Update")
     if df_all.empty:
         st.info("No products available.")
@@ -352,7 +352,7 @@ with st.expander("🤖 AI Scenario Generator", expanded=False):
     count = st.slider("Number of products", 5, 100, 20, step=5)
     
     if st.button("🚀 Generate & Populate DB"):
-        with st.spinner(f"Calling OpenAI to generate {count} products..."):
+        with st.spinner(f"Calling Groq to generate {count} products..."):
             try:
                 response = requests.post(f"{DJANGO_API}/generate/", json={"count": count, "scenario": scenario})
                 if response.status_code == 201:
@@ -401,13 +401,10 @@ with st.expander("📋 Audit Trail — Future Stock Events", expanded=False):
 
 st.markdown("---")
 
-# ---
-# 🧠 Semantic Search (Week 7)
-# This section lets users search products by MEANING, not just keywords.
-# For example, searching "construction toys" will find "Lego Castle" even
-# though the word "construction" doesn't appear in the product name.
-# ---
-with st.expander("🧠 Semantic Search", expanded=False):
+
+# Semantic Search
+
+with st.expander("Semantic Search", expanded=False):
     st.subheader("Search by Meaning")
     st.caption(
         "Unlike keyword search, semantic search understands what you *mean*. "
@@ -545,11 +542,11 @@ with st.expander("🧠 Semantic Search", expanded=False):
 
 st.markdown("---")
 
-# ---
-# 💬 RAG Chatbot (Week 8)
+
+# RAG Chatbot
 # Ask the Expert: Uses LangChain, ChromaDB, and Groq to answer questions
 # strictly based on uploaded store policies and product manuals.
-# ---
+
 with st.expander("💬 Ask the Expert (RAG Bot)", expanded=False):
     st.subheader("Store Assistant")
     st.caption(
@@ -663,11 +660,9 @@ with st.expander("💬 Ask the Expert (RAG Bot)", expanded=False):
 
 st.markdown("---")
 
-# ---
-# 🤖 AI Sales Agent (Week 9 & 10)
-# A multi-step ReAct agent that can lookup products, check inventory,
-# and calculate quotes while strictly enforcing discount policies.
-# ---
+
+# AI Sales Agent
+
 with st.expander("🤖 AI Sales Agent (Quotes & Discounts)", expanded=False):
     st.subheader("Store Quote Generator")
     st.caption(

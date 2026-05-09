@@ -34,7 +34,7 @@ class RAGService:
     def _get_vectorstore():
         """Initialize and cache the ChromaDB connection."""
         if RAGService._vectorstore is None:
-            # We use the same embedding model as Week 7 for consistency
+            # use the same embedding model as Week 7 for consistency
             embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
             
             # Connect to the local ChromaDB database
@@ -164,7 +164,7 @@ Answer:"""
             "sources": sources
         }
 
-    # ── Advanced: Combined DB + RAG ────────────────────────────────────
+    # Combined DB + RAG
 
     @staticmethod
     def ask_expert_with_stock(query: str):

@@ -7,7 +7,7 @@ class Category(Document):
     created_at = DateTimeField(default=datetime.utcnow)
     
     # categories / models / models.py
-    meta = {"meta":"categories"}
+    meta = {"collection":"categories"}
 
     
 

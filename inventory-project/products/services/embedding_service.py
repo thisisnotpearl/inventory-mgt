@@ -22,7 +22,7 @@ class EmbeddingService:
     vectors and finding products by meaning instead of keywords.
     """
 
-    # ── Model loading ──────────────────────────────────────────────────
+    # Model loading
     # We use "lazy loading" — the heavy model file (~90 MB) is only
     # downloaded and loaded into memory the FIRST time someone actually
     # triggers a search.  After that it stays cached in this class variable
@@ -44,7 +44,7 @@ class EmbeddingService:
             EmbeddingService._model = SentenceTransformer("all-MiniLM-L6-v2")
         return EmbeddingService._model
 
-    # ── Single text → vector ───────────────────────────────────────────
+    #  Single text -> vector 
 
     @staticmethod
     def compute_embedding(text: str) -> list[float]:
@@ -67,7 +67,7 @@ class EmbeddingService:
         vector = model.encode(text)
         return vector.tolist()
 
-    # ── Batch: compute embeddings for ALL products ─────────────────────
+    # Batch: compute embeddings for ALL products 
 
     @staticmethod
     def compute_all_embeddings() -> dict:
@@ -116,7 +116,7 @@ class EmbeddingService:
 
         return {"computed": computed, "total": len(product_list)}
 
-    # ── Cosine similarity ──────────────────────────────────────────────
+    #  Cosine similarity 
 
     @staticmethod
     def cosine_similarity(vec_a, vec_b) -> float:
@@ -137,7 +137,7 @@ class EmbeddingService:
         The formula:
                         A · B
             cos(θ) = ─────────
-                      |A| × |B|
+                      |A| x |B|
         """
         a = np.array(vec_a)
         b = np.array(vec_b)
@@ -156,7 +156,7 @@ class EmbeddingService:
 
         return float(dot / (norm_a * norm_b))
 
-    # ── Semantic search ────────────────────────────────────────────────
+    #  Semantic search 
 
     @staticmethod
     def semantic_search(query: str, top_k: int = 10, threshold: float = 0.25) -> list[dict]:
@@ -215,8 +215,7 @@ class EmbeddingService:
         # Only return the top_k results
         return results[:top_k]
 
-    # ── Find similar products ──────────────────────────────────────────
-
+    #  Find similar products
     @staticmethod
     def find_similar_products(product_id: str, top_k: int = 5) -> list[dict]:
         """
