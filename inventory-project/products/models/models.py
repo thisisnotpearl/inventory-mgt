@@ -1,4 +1,4 @@
-from mongoengine import Document, FloatField, ReferenceField, StringField, IntField, DateTimeField, BooleanField
+from mongoengine import Document, FloatField, ReferenceField, StringField, IntField, DateTimeField, BooleanField, ListField
 from datetime import datetime
 import pytz
 
@@ -31,6 +31,10 @@ class Product(Document):
     updated_at = DateTimeField(default=lambda: datetime.now(pytz.utc))
     is_deleted = BooleanField(default=False)
     deleted_at = DateTimeField(null=True)
+    # 384-dimensional vector capturing the semantic meaning of this product's
+    # name + description.  Pre-computed so searches are instant instead of
+    # re-encoding every product on every query.
+    embedding = ListField(FloatField(), default=list)
 
     meta = {"collection":"products"}
 
